@@ -17,19 +17,19 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
 
-
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MainActivity extends ActionBarActivity implements SensorEventListener {
 
     private Boolean running = false;
-
-    LocationManager locationManager;
-
+    private LocationManager locationManager;
     private Handler handler;
-
     private double force;
 
     Runnable updater = new Runnable() {
@@ -47,6 +47,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                         textbox.getText();
 
                 textbox.setText(update);
+
+                postToInflux(force, lat, lon);
 
                 force = 0;
 
@@ -118,29 +120,38 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         startButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
 
-                if (running) {
-                    String text = "STOPPING [" + timestamp() + "]\n\n" + textbox.getText();
-                    textbox.setText(text);
+            if (running) {
+                String text = "STOPPING [" + timestamp() + "]\n\n" + textbox.getText();
+                textbox.setText(text);
 
-                    spinner.setVisibility(View.GONE);
+                spinner.setVisibility(View.GONE);
 
-                    handler.removeCallbacks(updater);
-                    running = false;
-                    startButton.setText("MOSH!");
-                } else {
-                    String text = "STARTING [" + timestamp() + "]\n\n" + textbox.getText();
-                    textbox.setText(text);
+                handler.removeCallbacks(updater);
+                running = false;
+                startButton.setText("MOSH!");
+            } else {
+                String text = "STARTING [" + timestamp() + "]\n\n" + textbox.getText();
+                textbox.setText(text);
 
-                    spinner.setVisibility(View.VISIBLE);
-                    updater.run();
-                    running = true;
-                    startButton.setText("STOP");
-                }
-
+                spinner.setVisibility(View.VISIBLE);
+                updater.run();
+                running = true;
+                startButton.setText("STOP");
+            }
             }
         });
+    }
 
+    private void postToInflux(double accelleration, double latitude, double longitude) {
+        String url = "'http://localhost:9080/write?db=moshpitfinder' --data-binary 'mosh_pit_activity acceleration=8.8,lat=51.4504483,long=-2.6000072'"
 
+        DefaultHttpClient client = new DefaultHttpClient();
+        HttpPost post = new HttpPost(url);
+
+        try {
+            HttpResponse res = client.execute(post);
+
+        } catch (IOException ioe) { }
     }
 
     private String timestamp() {
